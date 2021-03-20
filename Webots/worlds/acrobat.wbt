@@ -1,0 +1,17 @@
+#VRML_SIM R2021a utf8
+
+WorldInfo {
+  gravity 0
+}
+Viewpoint {
+  orientation 0.9913528797313949 -0.09125443280605748 -0.09429791271027817 1.403975545876239
+  position -0.15500766377429814 -0.8518851991106433 0.23321975245092016
+  near 0.5
+}
+TexturedBackground {
+  texture "empty_office"
+}
+TexturedBackgroundLight {
+}
+DEF ACROBAT Acrobat {
+}

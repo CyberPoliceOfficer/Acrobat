@@ -1,0 +1,53 @@
+#VRML_SIM R2021a utf8
+WorldInfo {
+  title "Test Six-RSS"
+  basicTimeStep 1
+  lineScale 1
+}
+Viewpoint {
+  orientation -0.19615023621537248 -0.5577639775049489 -0.8064889523301063 3.6154448316213555
+  position 1.8861469468159944 2.4884227340577403 1.6473468330024537
+  near 0.5
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Transform {
+  rotation 1 0 0 1.5708
+  translation 0 0 -0.3
+  children [
+    CircleArena {
+    radius 7
+    floorTileSize 1 1
+    wallThickness 0.5
+    wallHeight 1
+    }
+  ]
+}
+Robot {
+ selfCollision TRUE
+ controller "RSSController"
+ children [
+  DEF MANIPULATOR SixRSS {
+  }
+  DEF BASE_PLATFORM_SHAPE Transform {
+    rotation 1 0 0 1.5708
+    translation 0 0 -0.15
+    children [
+      Shape {
+        appearance PBRAppearance {
+          baseColor 1 1 1
+          roughness 1
+          metalness 0
+        }
+        geometry Cylinder {
+          height 0.3
+          radius 0.5
+          subdivision 48
+        }
+      }
+    ]
+  }
+ ]
+}

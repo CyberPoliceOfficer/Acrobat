@@ -1,0 +1,347 @@
+#VRML_SIM R2021a utf8
+
+PROTO SixRSS [
+  field SFString name "SixRSS" # Name
+  field SFFloat r_b 0.5 # Radious of the base platform
+  field SFFloat r_m 0.3 # Radious of the mobile platform
+  field SFFloat d_b 0.2 # Lenght between base's anchors
+  field SFFloat d_m 0.4 # Lenght between mobile's anchors
+  field SFFloat d 0.7 # Platform arm length
+  field SFFloat h 0.3 # Servo arm length
+  field SFFloat phi 0.3491 # Angle between servo's arm and platform's base
+  field SFVec3f    translation     0 0 0       # Is `Transform.translation`.
+  field SFRotation rotation        1 0 0 0    # Is `Transform.rotation`.
+  field SFFloat arm_r 0.01 # arm radious
+  field SFFloat r_joint_static 0 # static friction in the ball joints
+  field SFFloat base_weight 100 # Weight of the manipulator base platform
+  field SFFloat mobile_weight 1 # Weight of the manipulator mobile platform
+  field SFFloat maxTorque 500
+  field SFFloat maxVelocity 11.56
+]
+{
+Solid {
+ %{
+   function CrossProduct(p1,p2)
+     p3 = {}
+     p3['x'] = p1['y']*p2['z'] - p1['z']*p2['y']
+     p3['y'] = p1['z']*p2['x'] - p1['x']*p2['z']
+     p3['z'] = p1['x']*p2['y'] - p1['y']*p2['x']
+     p3_mag = math.sqrt(p3['x']^2 + p3['y']^2 + p3['z']^2)
+     p3['x'] = p3['x']/p3_mag
+     p3['y'] = p3['y']/p3_mag
+     p3['z'] = p3['z']/p3_mag
+     return p3
+   end
+   
+   function VectorAngle(p1,p2)
+     A = p1['x']*p2['x'] + p1['y']*p2['y'] + p1['z']*p2['z']
+     B = math.sqrt(p1['x']^2+p1['y']^2+p1['z']^2)
+     C = math.sqrt(p2['x']^2+p2['y']^2+p2['z']^2)
+     return math.acos(A/(B*C))
+   end
+   
+   function BuildMatrix(up_k,alphap_k,T)
+    M = {}
+    M[1] = {}
+    M[1][1] = math.cos(alphap_k) + up_k['x']^2*(1-math.cos(alphap_k))
+    M[1][2] = up_k['x']*up_k['y']*(1-math.cos(alphap_k)) - up_k['z']*math.sin(alphap_k)
+    M[1][3] = up_k['x']*up_k['z']*(1-math.cos(alphap_k)) + up_k['y']*math.sin(alphap_k)
+    M[1][4] = T['x']
+    M[2] = {}
+    M[2][1] = up_k['y']*up_k['x']*(1-math.cos(alphap_k)) + up_k['z']*math.sin(alphap_k)
+    M[2][2] = math.cos(alphap_k) + up_k['y']^2*(1-math.cos(alphap_k))
+    M[2][3] = up_k['y']*up_k['z']*(1-math.cos(alphap_k)) - up_k['x']*math.sin(alphap_k)
+    M[2][4] = T['y']
+    M[3] = {}
+    M[3][1] = up_k['z']*up_k['x']*(1-math.cos(alphap_k)) - up_k['y']*math.sin(alphap_k)
+    M[3][2] = up_k['z']*up_k['y']*(1-math.cos(alphap_k)) + up_k['x']*math.sin(alphap_k)
+    M[3][3] = math.cos(alphap_k) + up_k['z']^2*(1-math.cos(alphap_k))
+    M[3][4] = T['z']
+    M[4] = {}
+    M[4][1] = 0
+    M[4][2] = 0
+    M[4][3] = 0
+    M[4][4] = 1
+    return M
+   end
+   
+   function GetAxisAngle(R)
+    angle = math.acos(( R[1][1] + R[2][2] + R[3][3] - 1)/2)
+    u = {}
+    u['x'] = (R[3][2] - R[2][3])/math.sqrt((R[3][2] - R[2][3])^2 + (R[1][3] - R[3][1])^2 + (R[2][1] - R[1][2])^2)
+    u['y'] = (R[1][3] - R[3][1])/math.sqrt((R[3][2] - R[2][3])^2 + (R[1][3] - R[3][1])^2 + (R[2][1] - R[1][2])^2)
+    u['z'] = (R[2][1] - R[1][2])/math.sqrt((R[3][2] - R[2][3])^2 + (R[1][3] - R[3][1])^2 + (R[2][1] - R[1][2])^2)
+    return u, angle
+   end
+   
+   function MatMul( m1, m2 )
+    if #m1[1] ~= #m2 then       -- inner matrix-dimensions must agree
+        return nil      
+    end 
+    
+    local res = {}
+    
+    for i = 1, #m1 do
+        res[i] = {}
+        for j = 1, #m2[1] do
+            res[i][j] = 0
+            for k = 1, #m2 do
+                res[i][j] = res[i][j] + m1[i][k] * m2[k][j]
+            end
+        end
+    end
+    
+    return res
+   end
+   
+   d_b = fields.d_b.value
+   r_b = fields.r_b.value
+   d_m = fields.d_m.value
+   r_m = fields.r_m.value
+   h = fields.h.value
+   d = fields.d.value
+   defined = 0
+   
+   theta_b = -math.asin(d_b/(2*r_b))
+   theta_m = -math.asin(d_m/(2*r_m))
+   beta_k = -math.pi/2 - math.pi
+   
+   z = math.sqrt(d^2 - (r_m*math.cos(theta_m) - r_b*math.cos(theta_b) + h*math.cos(beta_k))^2 - (r_m*math.sin(theta_m) - r_b*math.sin(theta_b) + h*math.sin(beta_k))^2)
+   print(z) 
+ }%
+
+
+ translation IS translation
+ rotation IS rotation
+ name IS name
+ children [
+  %{ for k = 1, 6 do 
+     n = math.floor((k-1)/2)
+     
+     theta_b = n*(2/3)*math.pi + (-1)^k*math.asin(d_b/(2*r_b))
+     theta_m = n*(2/3)*math.pi + (-1)^k*math.asin(d_m/(2*r_m))
+     
+     b_k = {}
+     b_k["x"] = r_b * math.cos(theta_b)
+     b_k["y"] = r_b * math.sin(theta_b)
+     b_k["z"] = 0
+     
+     m_k = {}
+     m_k["x"] = r_m * math.cos(theta_m)
+     m_k["y"] = r_m * math.sin(theta_m)
+     m_k["z"] = 0
+     
+     beta_k = n*(2/3)*math.pi + (-1)^k*math.pi/2 - math.pi/2;
+     beta_k0 = n*(2/3)*math.pi + (-1)^k*math.pi/2 - math.pi;
+     
+     phi_k = (-1)^(k+1)*fields.phi.value
+     
+  }%
+  DEF %{='R_' .. k}% HingeJoint {
+    jointParameters HingeJointParameters {
+      anchor %{=b_k["x"]}% %{=b_k["y"]}% %{=b_k["z"]}%
+      %{
+        u_k = {}
+        u_k["x"] = -math.sin(beta_k0) * math.cos(phi_k)
+        u_k["y"] = math.cos(beta_k0) * math.cos(phi_k)
+        u_k["z"] = -math.sin(phi_k)
+      }%
+      axis %{=u_k["x"]}% %{=u_k["y"]}% %{=u_k["z"]}%
+    }
+    device [
+      RotationalMotor {
+        name %{='"servo' .. k .. '"'}%
+        maxTorque IS maxTorque
+        maxVelocity IS maxVelocity
+      }
+    ]
+    endPoint DEF %{='SERVO_ARM_' .. k}% Solid {
+      translation %{=b_k["x"]}% %{=b_k["y"]}% %{=b_k["z"]}%
+      rotation 0 0 1 %{=beta_k}%
+      name %{='"servo_arm_' .. k .. '"'}%
+      physics Physics {
+        density 8000
+      }
+      children [
+        Transform {
+          translation 0 %{=h/2}% 0
+          children [
+          DEF  %{='SERVO_ARM_SHAPE_' .. k}% Shape {
+            appearance PBRAppearance {
+              baseColor 1 0 0
+              roughness 0.5
+              metalness 0.5
+            }
+            geometry Cylinder {
+              height %{=h}%
+              radius IS arm_r
+              subdivision 48
+            }
+          }
+          DEF %{='B_H_' .. k}% BallJoint {
+            jointParameters BallJointParameters {
+              anchor 0 %{=h/2}% 0
+            }
+            jointParameters2 JointParameters {
+              axis 1 0 0
+              staticFriction IS r_joint_static
+            }
+            jointParameters3 JointParameters {
+              axis 0 0 1
+              staticFriction IS r_joint_static
+            }
+          endPoint DEF %{='PLAT_ARM_' .. k}% Solid {
+            translation 0 %{=h/2}% 0
+            %{
+            d_k = {}
+            d_k['x'] = math.cos(-beta_k) * (r_m * math.cos(theta_m) - b_k["x"]) - math.sin(-beta_k) * (r_m * math.sin(theta_m) - b_k["y"])
+            d_k['y'] = math.sin(-beta_k) * (r_m * math.cos(theta_m) - b_k["x"]) + math.cos(-beta_k) * (r_m * math.sin(theta_m) - b_k["y"]) - h
+            d_k['z'] = z - b_k["z"]
+            
+            h_k = {}
+            h_k['x'] = 0
+            h_k['y'] = h
+            h_k['z'] = 0
+            
+            up_k = CrossProduct(h_k,d_k)
+            alphap_k = VectorAngle(h_k,d_k)            
+            }%
+            rotation %{=up_k['x']}% %{=up_k['y']}% %{=up_k['z']}% %{=alphap_k}%
+            physics Physics {
+              density 8000
+            }
+            children [
+               Transform {
+                 translation 0 %{=d/2}% 0
+                 children [
+                   DEF %{='PLAT_ARM_SHAPE_' .. k}% Shape {
+                     appearance PBRAppearance {
+                       baseColor 0 1 0
+                       roughness 1
+                       metalness 0.5
+                   }
+                   geometry Cylinder {
+                     height %{=d}%
+                     radius IS arm_r
+                     subdivision 48
+                   }
+                   }
+                   DEF %{='B_H_' .. k}% BallJoint {
+                    jointParameters BallJointParameters {
+                      anchor 0 %{=d/2}% 0
+                    }
+                    jointParameters2 JointParameters {
+                      axis 1 0 0
+                      staticFriction IS r_joint_static
+                    }
+                    jointParameters3 JointParameters {
+                      axis 0 0 1
+                      staticFriction IS r_joint_static
+                    }
+                    %{if defined == 0 then 
+                        t1 = {}
+                        t1['x'] = 0
+                        t1['y'] = -d/2
+                        t1['z'] = 0
+                        T1 = BuildMatrix(up_k, -alphap_k, t1)
+                        
+                        t2 = {}
+                        t2['x'] = 0
+                        t2['y'] = -h
+                        t2['z'] = 0
+                        u2 = {}
+                        u2['x'] = 0
+                        u2['y'] = 0
+                        u2['z'] = 1
+                        T2 = BuildMatrix(u2, -beta_k, t2)
+                        
+                        t3 = {}
+                        t3['x'] = -b_k["x"]
+                        t3['y'] = -b_k["y"]
+                        t3['z'] = -b_k["z"]+z
+                        u3 = {}
+                        u3['x'] = 1
+                        u3['y'] = 0
+                        u3['z'] = 0
+                        T3 = BuildMatrix(u3, 1.5708, t3)
+                        
+                        T = MatMul(MatMul(T1,T2),T3)
+                        
+                        u, angle = GetAxisAngle(T)
+
+                       }%
+                       endPoint DEF MOBILE_PLATFORM Solid {
+                          translation %{=T[1][4]}% %{=T[2][4]}% %{=T[3][4]}%
+                          rotation %{=u['x']}% %{=u['y']}% %{=u['z']}% %{=angle}%
+                          name "mobile_plat"
+                          children[
+                             InertialUnit{}
+                             GPS{}
+                             DEF MOBILE_PLATFORM_SHAPE Shape {
+                                  appearance PBRAppearance {
+                                    baseColor 0 0 0
+                                    roughness 1
+                                    metalness 0.5
+                                  }
+                                  geometry Cylinder {
+                                    radius IS r_m
+                                    height IS arm_r
+                                    subdivision 48
+                                  }
+                                }
+                          ]
+                          boundingObject USE MOBILE_PLATFORM_SHAPE
+                          physics Physics {
+                            mass IS mobile_weight
+                            density -1
+                          }
+                        }
+                    %{ defined = 1
+                      else
+                    }%
+                      endPoint SolidReference {
+                        solidName "mobile_plat"
+                      }  
+                    %{end}%
+                  }
+                  
+                   
+              ]}]
+              boundingObject Transform {
+                 translation 0 %{=d/2}% 0
+                 children [USE %{='PLAT_ARM_SHAPE_' .. k}%]}
+        }
+       }
+       ]
+       }
+     ]
+     boundingObject Transform {
+       translation 0 %{=h/2}% 0
+       children [USE %{='SERVO_ARM_SHAPE_' .. k}%]}
+   }
+  }
+  %{ end }%
+  ]
+  boundingObject Transform {
+    rotation 1 0 0 1.5708
+    translation 0 0 %{=-h/2}%
+    children [
+    Shape {
+    appearance PBRAppearance {
+      baseColor 1 0 0
+      roughness 1
+      metalness 0
+    }
+    geometry Cylinder {
+      height IS h
+      radius IS r_b
+      subdivision 48
+    }
+    }]
+  }
+  physics Physics {
+    mass IS base_weight
+    density -1
+  }
+}
+}

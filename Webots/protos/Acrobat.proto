@@ -1,0 +1,88 @@
+PROTO Acrobat[
+  field SFString   name           "Acrobat"  # Name
+  field SFVec3f    translation    0 0 0      # Is `Transform.translation`.
+  field SFRotation rotation       1 0 0 0    # Is `Transform.rotation`. 
+  field SFString   controller           "Acrobat"  # Name
+]
+{
+Robot {
+  translation IS translation
+  rotation IS rotation
+  children [
+    # Sensors
+    InertialUnit {
+    }
+    Accelerometer {
+    }
+    Gyro {
+    }
+    # Mesh file or the Robot body
+    Transform {
+      translation 0 0 -0.0615 # Model origin is not the CoM
+      rotation 0 0 1 %{=math.pi/2}%
+      children
+      [
+        DEF LOOKS RobotBody {}
+      ]
+    }
+    # 6-RSS Parallel Manipulator
+    DEF MANIPULATOR SixRSS {
+        translation 0 0 0.0715      
+        rotation 1 0 0 0 
+        
+        # Manipulator Geometry
+        r_b 0.05257 
+        r_m 0.04814 
+        d_b 0.01559 
+        d_m 0.0800
+        d 0.0820 
+        h 0.0250
+        
+        # Physics    
+        arm_r 0.0015 
+        base_weight 0.01
+        mobile_weight 0.1
+        
+        # Servo properties 
+        maxVelocity 5   
+    }
+    %{
+    -- Acrobat Geometry
+    theta = {0, 330, 120, 90, 240, 210}
+    phi = {0, 60, 120, 180, 240, 300}
+    gamma = {35.2643897, 90, 35.2643897, 90, 35.2643897, 90}
+    a = 0.181
+    
+    for k = 1, 6 do  
+      theta_k = math.rad(theta[k])
+      phi_k = math.rad(phi[k])
+      gamma_k = math.rad(gamma[k])
+      }%
+      DEF %{='PROPELLER_' .. k}% FreePropeller {
+        # Propeller constants
+        thrustConstantsIn 1e-03 0 #K1
+        torqueConstantsIn 0 0 #K2
+        # Propeller geometry
+        centerOfThrustIn %{=a/math.sqrt(3)*math.cos(phi_k)}% %{=a/math.sqrt(3)*math.sin(phi_k)}% %{=(-1)^k*a/math.sqrt(6)}%
+        shaftAxisIn %{=math.cos(theta_k)*math.sin(gamma_k)}% %{=math.sin(theta_k)*math.sin(gamma_k)}% %{=math.cos(gamma_k)}%
+        nameIn %{='"prop' .. k .. '"'}%
+      }
+    %{ end }%
+  ]
+  name IS name
+  boundingObject Group {
+    children [
+      Sphere {
+        radius 0.075
+      }
+    ]
+  }
+  physics Physics {
+    density -1
+    mass 1
+    centerOfMass 0 0 0
+  }
+  supervisor TRUE
+  controller "AcrobatMaster"
+}
+}

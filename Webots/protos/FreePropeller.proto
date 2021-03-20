@@ -1,0 +1,23 @@
+#VRML_SIM R2021a utf8
+
+PROTO FreePropeller [
+  field SFVec3f shaftAxisIn 1 0 0
+  field SFVec3f centerOfThrustIn 0 0 0 
+  field SFString nameIn "prop"
+  field SFVec2f thrustConstantsIn 1e-03 0    # any vector
+  field SFVec2f torqueConstantsIn 0 0    # any vector
+]
+{
+  Propeller {
+      shaftAxis IS shaftAxisIn
+      centerOfThrust IS centerOfThrustIn
+      thrustConstants IS thrustConstantsIn
+      torqueConstants IS torqueConstantsIn
+      device RotationalMotor {
+        name IS nameIn
+        acceleration -1
+        maxVelocity 400
+        maxTorque 30
+      }
+    }
+}

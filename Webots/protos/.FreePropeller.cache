@@ -1,0 +1,11 @@
+Webots Proto Cache File version 1.5
+protoFileHash: 2ef2acdef9b4a0fcae36654d32c550ab
+needsRobotAncestor: 1
+baseType: Propeller
+slotType: 
+parameters: shaftAxisIn,centerOfThrustIn,nameIn,thrustConstantsIn,torqueConstantsIn
+tags: 
+license: 
+licenseUrl: 
+documentationUrl: 
+info: 
