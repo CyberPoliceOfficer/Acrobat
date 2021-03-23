@@ -7,7 +7,7 @@ centralWidgetVisible: 1
 projectionMode: PERSPECTIVE
 renderingMode: PLAIN
 orthographicViewHeight: 1
-textFiles: 0 "protos/Acrobat.proto" "worlds/manipulator.wbt" "controllers/RSSController/RSSController.py" "protos/SixRSS.proto"
+textFiles: 2 "protos/Acrobat.proto" "worlds/manipulator.wbt" "controllers/RSSController/RSSController.py" "protos/SixRSS.proto"
 globalOptionalRendering: CoordinateSystem
 consoles: Console:All:All
 x3dExport-shadowBias: 0

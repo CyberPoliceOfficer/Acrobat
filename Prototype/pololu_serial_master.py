@@ -18,7 +18,7 @@ class servo_serial_master:
     def set_target_rad (self, target_vec):      
         for servo_n, angle in np.ndenumerate(target_vec):
             
-            target =  np.uint16(np.around(4*(self.servo_home[servo_n[0]] + np.power(-1,servo_n[0]+1) * 2000/np.pi*angle)))
+            target =  np.uint16(np.around(4*(self.servo_home[servo_n[0]] + np.power(-1,servo_n[0]+1) * 2000/np.pi*angle))) # 2000?! Acho que deve ser 1000
             print(servo_n[0], angle, target)
             array = bytearray([self.commands['set_target'], servo_n[0], target & 0x7F, (target >> 7) & 0x7F]) # 132 = command flag, 0 = servo number, [112,46] = 8 bit target
             # in quarter microseconds. 1 quarter microseconds = 0,25 microseconds
