@@ -2,7 +2,7 @@ clear;
 %% Desired translation and rotation of the platform
 
 %T = [0.00 0.00 0.94207830650342]';%Translation near singularity
-T = [0.00 0.0 0.060561362387752]';%Translation
+T = [0 -0.0808578261898999 0]';%Translation
 W = [0; 0; 0]; %Rotation
 R = GetRotMatv0(W(1),W(2),W(3));
 
@@ -12,10 +12,10 @@ r_b = 0.052566; %Radious of the base
 r_p = 0.048139; %Radious of the platform
 
 d_b = 0.01559; %Lenght between base's anchors
-d_p = 0.0800; %Lenght between platform's anchors
+d_p = 0.00800; %Lenght between platform's anchors
 
-h = 0.025; %Servo's arm lenght
-d = 0.085; %Platform's arm lenght
+h = 0.027; %Servo's arm lenght
+d = 0.1175; %Platform's arm lenght
 
 phi = 20*2*pi/360; %Angle between servo's arm and platform's base
 

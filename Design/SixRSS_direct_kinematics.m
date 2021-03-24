@@ -41,7 +41,6 @@ phi_k = (-1).^(k+1)*phi;
 
 alpha_k = SixRSS_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h);
 
-
 %% Check if the restriction still stands
 
 home = (d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) + h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) + h*sin(beta_k)).^2).^(1/2);

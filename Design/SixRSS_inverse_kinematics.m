@@ -1,4 +1,4 @@
-function alpha_k = SP_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h)
+function alpha_k = SixRSS_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h)
     %% Compute vector ik
 
     i_k = repmat (T, [1,6]) + R*p_k - b_k;
