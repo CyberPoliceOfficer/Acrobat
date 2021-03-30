@@ -1,8 +1,8 @@
 clear;
 %% Desired translation and rotation of the platform
 
-%T = [0.00 0.00 0.94207830650342]';%Translation near singularity
-T = [0 -0.0808578261898999 0]';%Translation
+T = [0.00 0.00 0.12]';%Translation near singularity
+%T = [0 -0.0808578261898999 0]';%Translation
 W = [0; 0; 0]; %Rotation
 R = GetRotMatv0(W(1),W(2),W(3));
 
@@ -12,7 +12,7 @@ r_b = 0.052566; %Radious of the base
 r_p = 0.048139; %Radious of the platform
 
 d_b = 0.01559; %Lenght between base's anchors
-d_p = 0.00800; %Lenght between platform's anchors
+d_p = 0.0800; %Lenght between platform's anchors
 
 h = 0.027; %Servo's arm lenght
 d = 0.1175; %Platform's arm lenght
@@ -33,8 +33,12 @@ p_k = [r_p * cos(theta_p); r_p * sin(theta_p);zeros(1,6)];
 
 %% Compute beta and gamma
 
-beta_k = n*(2/3)*pi + (-1).^(k)*pi/2;
+beta_k = n*(2/3)*pi + (-1).^(k)*(pi/2);
 phi_k = (-1).^(k+1)*phi;
+
+%% Home
+home = mean(d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2);
+%T = [0.00 0.00 home]';%Translation near singularity
 
 %% Compute the inverse kinematics
 
@@ -42,17 +46,10 @@ alpha_k = SixRSS_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h);
 
 %% Check if the restriction still stands
 
-home = (d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2);
-
 h_k = h* [sin(beta_k).*sin(phi_k).*sin(alpha_k) + cos(beta_k).*cos(alpha_k);
           -cos(beta_k).*sin(phi_k).*sin(alpha_k) + sin(beta_k).*cos(alpha_k);
           cos(phi_k).*sin(alpha_k)];
 H_k = b_k + h_k;
-
-% 
-% u_k = [sin(beta_k).*cos(phi_k);
-%        -cos(beta_k).*cos(phi_k);
-%        sin(phi_k)];
 
 u_k = -[cos(beta_k+pi/2).*cos(phi_k);
        sin(beta_k+pi/2).*cos(phi_k);

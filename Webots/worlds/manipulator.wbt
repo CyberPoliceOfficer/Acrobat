@@ -5,8 +5,8 @@ WorldInfo {
   lineScale 1
 }
 Viewpoint {
-  orientation -0.19615023621537248 -0.5577639775049489 -0.8064889523301063 3.6154448316213555
-  position 1.8861469468159944 2.4884227340577403 1.6473468330024537
+  orientation -0.3470819387336281 -0.5886343707673642 -0.7300984216913601 3.8802510220643294
+  position 0.5964495087692846 0.3454528874548366 0.16066266352848318
   near 0.5
 }
 TexturedBackground {
@@ -15,7 +15,7 @@ TexturedBackgroundLight {
 }
 Transform {
   rotation 1 0 0 1.5708
-  translation 0 0 -0.3
+  translation 0 0 0
   children [
     CircleArena {
     radius 7
@@ -28,28 +28,79 @@ Transform {
 Robot {
  selfCollision TRUE
  controller "RSSController"
- rotation 1 0 0 1.5708
- translation 0 0 1 
+ rotation 1 0 0 3.1416
+ translation 0 0 0.16
  children [
   DEF MANIPULATOR SixRSS {
+      r_b 0.052566 # Radious of the base platform
+      r_m 0.048139 # Radious of the mobile platform
+      d_b 0.01559 # Lenght between base's anchors
+      d_m 0.00800 # Lenght between mobile's anchors
+      d 0.1175 # Platform arm length
+      h 0.027  # Servo arm length
+      phi 0.3491 # Angle between servo's arm and platform's base
+      arm_r 0.002 # arm radious
+      r_joint_static 0 # static friction in the ball joints
+      base_weight 0.1 # Weight of the manipulator base platform
+      mobile_weight 0.2 # Weight of the manipulator mobile platform
+      maxTorque 25
+      maxVelocity 11.56
+      EndEffectorTool Solid {
+        translation 0 0.02 0
+        children [
+          DEF Extrusor Shape {
+          appearance PBRAppearance {
+            baseColor 0.9 0.9 0.9
+            roughness 1
+            metalness 1
+          }
+          geometry Cylinder {
+            height 0.04
+            radius 0.015
+            subdivision 48
+          }
+          }
+        ]
+        boundingObject USE Extrusor
+        physics Physics {
+          mass 0.1
+          density -1
+        }
+      }
   }
   DEF BASE_PLATFORM_SHAPE Transform {
     rotation 1 0 0 1.5708
-    translation 0 0 -0.15
+    translation 0 0 0
     children [
       Shape {
         appearance PBRAppearance {
-          baseColor 1 1 1
+          baseColor 0 1 1
           roughness 1
           metalness 0
         }
         geometry Cylinder {
-          height 0.3
-          radius 0.5
+          height 0.005
+          radius 0.052566
           subdivision 48
         }
       }
     ]
   }
  ]
+}
+Transform {
+  rotation 1 0 0 1.5708
+  children[
+  Shape {
+    appearance PBRAppearance {
+      baseColor 1 1 1
+      roughness 1
+      metalness 0
+    }
+    geometry Cylinder {
+      height 0.001
+      radius 0.15
+      subdivision 48
+    }
+  }]
 }

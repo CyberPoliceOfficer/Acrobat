@@ -17,6 +17,7 @@ PROTO SixRSS [
   field SFFloat mobile_weight 1 # Weight of the manipulator mobile platform
   field SFFloat maxTorque 500
   field SFFloat maxVelocity 11.56
+  field MFNode  EndEffectorTool []
 ]
 {
 Solid {
@@ -289,6 +290,10 @@ Solid {
                                     subdivision 48
                                   }
                                 }
+                             Transform {
+                               children IS EndEffectorTool
+                             
+                             }
                           ]
                           boundingObject USE MOBILE_PLATFORM_SHAPE
                           physics Physics {

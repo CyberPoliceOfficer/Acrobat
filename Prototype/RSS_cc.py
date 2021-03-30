@@ -45,4 +45,22 @@ class RSS_cc:
         g_k = np.power(np.linalg.norm(i_k, axis=0), 2) -(self.d**2 - self.h**2)
     
         return np.arcsin(g_k/np.sqrt(e_k**2 + f_k**2)) - np.arctan2(f_k,e_k)
+    
+    def inverse_kinematic_jacobian (self, pose, alpha_k):
+        Rot = R.from_euler('zyz', pose[3:], degrees=False)
+        T = np.matlib.repmat(pose[:3], 6, 1).T
+        M_k = np.matmul(Rot.as_matrix(),self.m_k) + T
+        h_k = self.h * np.array([np.sin(self.beta_k)*np.sin(self.phi_k)*np.sin(alpha_k) + np.cos(self.beta_k)*np.cos(alpha_k),
+                        -np.cos(self.beta_k)*np.sin(self.phi_k)*np.sin(alpha_k) + np.sin(self.beta_k)*np.cos(alpha_k),
+                        np.cos(self.phi_k)*np.sin(alpha_k)])
+        H_k = self.b_k + h_k
+        Jx = np.concatenate(((M_k-H_k).T, np.cross(M_k-T, M_k-H_k, axis=0).T), axis=1)
+        u_k = -np.array([np.cos(self.beta_k+np.pi/2)*np.cos(self.phi_k),
+              np.sin(self.beta_k+np.pi/2)*np.cos(self.phi_k),
+              np.sin(self.phi_k)])
+
+        # dot product
+        dot = np.identity(6)/np.sum(np.cross(H_k-self.b_k, M_k - H_k, axis=0)*u_k, axis=0)
+        return np.matmul(Jx, dot)
+
             

@@ -74,13 +74,15 @@ Area = 0;
 
 z = mean((d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2));
 
+R = eye(3);
+
 %% Generate the workspace
 for ix = 1:dim_x
     for iy = 1:dim_y
         T = [x_min + dx*ix; y_min + dy*iy; z];
         workspace = 1;
         
-        alpha_k = SixRSS_inverse_kinematics (T, eye(3), p_k, b_k, beta_k, phi_k, d, h);
+        alpha_k = SixRSS_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h);
 
         if (isreal(alpha_k)== 0)
            workspace = 0;

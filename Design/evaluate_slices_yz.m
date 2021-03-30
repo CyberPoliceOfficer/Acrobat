@@ -10,7 +10,7 @@ r_b = 0.052566; %Radious of the base
 r_p = 0.048139; %Radious of the platform
 
 d_b = 0.01559; %Lenght between base's anchors
-d_p = 0.0800; %Lenght between platform's anchors
+d_p = 0.00800; %Lenght between platform's anchors
 
 h = 0.027; %Servo's arm lenght
 d = 0.1175; %Platform's arm lenght
@@ -31,7 +31,7 @@ p_k = [r_p * cos(theta_p); r_p * sin(theta_p);zeros(1,6)];
 
 %% Compute beta and gamma
 
-beta_k = n*(2/3)*pi + (-1).^(k)*pi/2;
+beta_k = n*(2/3)*pi + (-1).^(k)*pi;
 phi_k = (-1).^(k+1)*phi;
 
     
@@ -72,15 +72,16 @@ Area = 0;
 
 %% Find z
 
-y = 0;
+x = 0;
+R = eye(3);
 
 %% Generate the workspace
 for iy = 1:dim_y
     for iz = 1:dim_z
-        T = [y; y_min + dy*iy; z_min + dz*iz];
+        T = [x; y_min + dy*iy; z_min + dz*iz];
         workspace = 1;
         
-        alpha_k = SixRSS_inverse_kinematics (T, eye(3), p_k, b_k, beta_k, phi_k, d, h);
+        alpha_k = SixRSS_inverse_kinematics (T, R, p_k, b_k, beta_k, phi_k, d, h);
 
         if (isreal(alpha_k)== 0)
            workspace = 0;

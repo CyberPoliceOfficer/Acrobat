@@ -11,7 +11,7 @@ print(robot.getCustomData)
 gps = robot.getDevice("gps")
 gps.enable(TIME_STEP)
 
-Manipulator = RSS_cc()
+Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.017, d_m = 0.008, d = 0.1175, h = 0.027)
 
 time_stamp = np.empty((1,0))
 poses = np.empty((3,0))
@@ -33,13 +33,24 @@ while robot.step(TIME_STEP) != -1:
     if (t<=1 and t>0):
         for i in range(1,7):
             servo = robot.getDevice("servo" + str(i))
-            alphas = Manipulator.inverse_kinematics([0.1,0.1,0.7,0,0,0])
+            alphas = Manipulator.inverse_kinematics([0.0,0.0,0.11,0,0,0])
             servo.setPosition(alphas[i-1])
     if (t<=2 and t>1):
         for i in range(1,7):
             servo = robot.getDevice("servo" + str(i))
-            alphas = Manipulator.inverse_kinematics([0.2,0.2,0.7,0,0,0])
+            alphas = Manipulator.inverse_kinematics([0.0,0.04,0.11,0,0,0])
             servo.setPosition(alphas[i-1])
+    if (t<=3 and t>2):
+        for i in range(1,7):
+            servo = robot.getDevice("servo" + str(i))
+            alphas = Manipulator.inverse_kinematics([0.04,0.04,0.11,0,0,0])
+            servo.setPosition(alphas[i-1])
+    if (t<=5 and t>4):
+        for i in range(1,7):
+            servo = robot.getDevice("servo" + str(i))
+            alphas = Manipulator.inverse_kinematics([0.04,-0.04,0.11,0,0,0])
+            servo.setPosition(alphas[i-1])
+    
     
     if (t > 20):
         break
