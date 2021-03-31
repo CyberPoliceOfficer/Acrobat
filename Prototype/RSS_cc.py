@@ -4,8 +4,7 @@ import numpy.matlib
 
 class RSS_cc:
     def __init__ (self, r_b = 0.5, r_m = 0.3, d_b = 0.2, d_m = 0.4, d = 0.7, h = 0.3, phi = 0.3491):
-        # Physical parameters of the platform in meters and radians.
-        
+        # Physical parameters of the platform in meters and radians.       
         self.r_b = r_b #Radious of the base
         self.r_m = r_m #Radious of the platform
         
@@ -17,19 +16,17 @@ class RSS_cc:
         
         self.phi = phi #Angle between servo's arm and platform's base
          
-        # Compute vector bk and mk
-        
+        # Compute vector bk and mk 
         k = np.arange(1,7)
         n = np.floor((k-1)/2)
         
-        theta_b = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_b/(2*r_b))
-        theta_m = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_m/(2*r_m))
+        self.theta_b = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_b/(2*r_b))
+        self.theta_m = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_m/(2*r_m))
         
-        self.b_k = [r_b * np.cos(theta_b), r_b * np.sin(theta_b), np.zeros(6)]
-        self.m_k = [r_m * np.cos(theta_m), r_m * np.sin(theta_m), np.zeros(6)]
+        self.b_k = [r_b * np.cos(self.theta_b), r_b * np.sin(self.theta_b), np.zeros(6)]
+        self.m_k = [r_m * np.cos(self.theta_m), r_m * np.sin(self.theta_m), np.zeros(6)]
             
         # Compute beta and gamma
-
         self.beta_k = n*(2/3)*np.pi + np.power(-1,k)*np.pi/2
         self.phi_k = np.power(-1,k+1)*phi
         
@@ -46,8 +43,10 @@ class RSS_cc:
     
         return np.arcsin(g_k/np.sqrt(e_k**2 + f_k**2)) - np.arctan2(f_k,e_k)
     
-    def inverse_kinematic_jacobian (self, pose, alpha_k):
+    def inverse_kinematic_jacobian (self, pose):
         Rot = R.from_euler('zyz', pose[3:], degrees=False)
+        alpha_k = self.inverse_kinematics(pose)
+        
         T = np.matlib.repmat(pose[:3], 6, 1).T
         M_k = np.matmul(Rot.as_matrix(),self.m_k) + T
         h_k = self.h * np.array([np.sin(self.beta_k)*np.sin(self.phi_k)*np.sin(alpha_k) + np.cos(self.beta_k)*np.cos(alpha_k),
@@ -63,4 +62,6 @@ class RSS_cc:
         dot = np.identity(6)/np.sum(np.cross(H_k-self.b_k, M_k - H_k, axis=0)*u_k, axis=0)
         return np.matmul(Jx, dot)
 
-            
+    def home_pose (self):
+        z = np.sqrt(self.d**2 - (self.r_m*np.cos(self.theta_m[0]) - self.r_b*np.cos(self.theta_b[0]) + self.h*np.cos(self.beta_k[0]))**2 - (self.r_m*np.sin(self.theta_m[0]) - self.r_b*np.sin(self.theta_b[0]) - self.h*np.sin(self.beta_k[0]))**2)         
+        return np.array([0, 0, z, 0, 0, 0])

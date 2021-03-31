@@ -9,12 +9,10 @@ class servo_serial_master:
         self.commands['set_speed'] = 135
 
         # PWM value, in microseconds, corresponding to each servo home position
-        self.servo_home = np.array([1455, 1480, 1480, 1585, 1445, 1500])
+        self.servo_home = np.array([1455, 1480, 1480, 1585, 1569.75, 1500])
 
         # (Delta u)/(Delta alpha)
         self.gamma = 2000/np.pi
-        factor = ((10*10**(-3))/0.25)*(self.gamma)
-        print(factor)
 
         # Open the serial port
         self.serial_port = serial.Serial (port, baud_rate)

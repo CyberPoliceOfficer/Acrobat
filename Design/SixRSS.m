@@ -1,7 +1,6 @@
 clear;
 %% Desired translation and rotation of the platform
 
-T = [0.00 0.00 0.12]';%Translation near singularity
 %T = [0 -0.0808578261898999 0]';%Translation
 W = [0; 0; 0]; %Rotation
 R = GetRotMatv0(W(1),W(2),W(3));
@@ -38,7 +37,7 @@ phi_k = (-1).^(k+1)*phi;
 
 %% Home
 home = mean(d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2);
-%T = [0.00 0.00 home]';%Translation near singularity
+T = [0.00 0.00 home]';
 
 %% Compute the inverse kinematics
 
