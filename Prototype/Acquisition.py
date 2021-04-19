@@ -91,22 +91,18 @@ class flir_cameras:
         # Release system instance
         self.system.ReleaseInstance()
 
+class head_pose:
+    def __init__(self, head_ids = {24, 29}):
+        YAH = 2
+        
 def main():
     camera = flir_cameras()
-    img = camera.Acquire()
+    img = []
+    img.append(camera.Acquire())
+    img.append(camera.Acquire())
+    print(np.shape(img))
     camera.Close()
-    # Undistort the image
-    img = cv.undistort(img, mtx, dist)
-    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-    # Detect aruco markers
-    corners, ids, rejectedImgPoints	= cv.aruco.detectMarkers(img_gray, aruco_dict)
-    rvecs, tvecs, _objPoints = cv.aruco.estimatePoseSingleMarkers(corners, aruco_side, mtx, dist)
-
-    print(_objPoints)
-    print(rvecs)
-    print(tvecs)
-    cv.imshow('img', ResizeWithAspectRatio(img, width=1100))
+    cv.imshow('img', ResizeWithAspectRatio(img[1], width=1100))
     cv.waitKey()
 if __name__ == '__main__':
     if main():
