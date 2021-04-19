@@ -18,7 +18,8 @@ class controller:
 		self.state['omega'] = np.array([0, 0, 0, 0, 0, 0], dtype=float)
 
 	def go_home(self):
-		home_pose = self.manipulator.home_pose()		
+		home_pose = self.manipulator.home_pose()	
+		self.actuators.set_speed_rad_s(np.array([0, 0, 0, 0, 0, 0], dtype=float))	
 		self.actuators.set_target_rad(self.manipulator.inverse_kinematics(home_pose))
 		self.state['p'] = home_pose
 
@@ -74,20 +75,24 @@ class controller:
 			
 
 def main():
-	Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.017, d_m = 0.01, d = 0.1175, h = 0.027)
+	Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.017, d_m = 0.008, d = 0.1175, h = 0.027)
 	Populu_maestro = servo_serial_master(port = '/dev/ttyACM0', baud_rate = 115200)
 	cnt = controller(manipulator = Manipulator, actuator_interface = Populu_maestro)
 	cnt.go_home()
-	#Populu_maestro.set_target_rad(0*np.pi/2*np.ones(6))
-	corner=0.03
-	speed=0.2	
-	cnt.path_linear(np.array([corner, corner, Manipulator.home_pose()[2]]),speed)
+	corner=0.04
+	speed=0.4
+	x = corner
+	y = corner
+	delta = 0.001
+	cnt.path_linear(np.array([x, y, Manipulator.home_pose()[2]]),speed)
 	time.sleep(1)
-	while False:
-		cnt.path_linear_v2(np.array([corner, corner, Manipulator.home_pose()[2]]),speed)
-		cnt.path_linear_v2(np.array([corner, -corner, Manipulator.home_pose()[2]]),speed)
-		cnt.path_linear_v2(np.array([-corner, -corner, Manipulator.home_pose()[2]]),speed)
-		cnt.path_linear_v2(np.array([-corner, corner, Manipulator.home_pose()[2]]),speed)
+	while True:
+		x = -x
+		y = y - delta
+		if (y <= -1*corner):
+			break
+		cnt.path_linear_v2(np.array([x, y, Manipulator.home_pose()[2]]),speed)
+		
 	cnt.go_home()
 
 

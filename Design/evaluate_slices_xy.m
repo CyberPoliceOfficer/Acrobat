@@ -88,7 +88,7 @@ for ix = 1:dim_x
            workspace = 0;
         end
 
-        if (workspace)
+        if (1)
             %% Pre compute a few things
             h_k = h* [sin(beta_k).*sin(phi_k).*sin(alpha_k) + cos(beta_k).*cos(alpha_k);
                       -cos(beta_k).*sin(phi_k).*sin(alpha_k) + sin(beta_k).*cos(alpha_k);

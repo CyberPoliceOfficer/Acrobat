@@ -3,7 +3,7 @@ K1 = 1e-03;
 K2 = 6.4e-03*K1;
 a = sqrt(2);
 
-factor = 0.01;
+factor = 0;
 
 %% Unnamed Robot
 theta = deg2rad([0 180 90 90 90 90]);

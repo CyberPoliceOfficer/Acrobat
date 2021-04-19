@@ -2,6 +2,8 @@ clear;
 %% Desired translation and rotation of the platform
 
 %T = [0 -0.0808578261898999 0]';%Translation
+%T = [0; 0; 0.11];
+T = [0; 0; 0.13812719037571220825899587];
 W = [0; 0; 0]; %Rotation
 R = GetRotMatv0(W(1),W(2),W(3));
 
@@ -37,7 +39,6 @@ phi_k = (-1).^(k+1)*phi;
 
 %% Home
 home = mean(d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2);
-T = [0.00 0.00 home]';
 
 %% Compute the inverse kinematics
 
@@ -61,6 +62,9 @@ norm_h_k = vecnorm(h_k);
 alpha_k
 
 J = GetJacobian (T, R, b_k, H_k, p_k, u_k);
+M_k = R*p_k + T;
+Jx = [(M_k-H_k)' cross(M_k-T, M_k-H_k)'];
+Jq = eye(6).*dot(cross(H_k-b_k,M_k - H_k),u_k);
  
 [~,S,~] = svd(J);
 S = diag(S);
