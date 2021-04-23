@@ -2,6 +2,13 @@ from pololu_serial_master import servo_serial_master
 from RSS_cc import RSS_cc
 import numpy as np
 import time
+from Acquisition import flir_cameras
+import _thread
+
+global flag
+flag = True
+fps = 60
+
 
 class controller:
 	def __init__(self, manipulator = None, actuator_interface = None):
@@ -72,29 +79,42 @@ class controller:
 		self.state['omega'].fill(0)
 		self.state['theta'].fill(0)
 
-			
+def camera_thread():
+	camera = flir_cameras()
+	imgs = []
+	while flag:
+		imgs.append(camera.Acquire())
+		time.sleep(1/fps)
 
+	np.savez('path_04', images=imgs, fps=fps)
+	camera.Close()
+	print("Video saved and camera closed")
+
+		
 def main():
 	Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.017, d_m = 0.008, d = 0.1175, h = 0.027)
 	Populu_maestro = servo_serial_master(port = '/dev/ttyACM0', baud_rate = 115200)
 	cnt = controller(manipulator = Manipulator, actuator_interface = Populu_maestro)
+	
 	cnt.go_home()
 	corner=0.04
 	speed=0.4
 	x = corner
 	y = corner
-	delta = 0.001
-	cnt.path_linear(np.array([x, y, Manipulator.home_pose()[2]]),speed)
-	time.sleep(1)
-	while True:
-		x = -x
-		y = y - delta
-		if (y <= -1*corner):
-			break
-		cnt.path_linear_v2(np.array([x, y, Manipulator.home_pose()[2]]),speed)
-		
-	cnt.go_home()
 
+	cnt.path_linear(np.array([x, y, Manipulator.home_pose()[2]]),speed)
+	_thread.start_new_thread (camera_thread)
+	time.sleep(1)
+	for i in range(10):
+		cnt.path_linear(np.array([-x, y, Manipulator.home_pose()[2]]),speed)
+		cnt.path_linear(np.array([-x, -y, Manipulator.home_pose()[2]]),speed)
+		cnt.path_linear(np.array([x, -y, Manipulator.home_pose()[2]]),speed)
+		cnt.path_linear(np.array([x, y, Manipulator.home_pose()[2]]),speed)
+	print("Path ended, returning home")
+	flag = False
+	time.sleep(1)	
+	cnt.go_home()
+	
 
 if __name__ == "__main__":
     main()
