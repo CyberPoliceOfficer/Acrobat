@@ -5,13 +5,6 @@ import time
 import numpy as np
 import cv2 as cv
 
-# Load camera calibration
-npzfile = np.load('cali_values.npz')
-mtx = npzfile['mtx']
-dist = npzfile['dist']
-ret = npzfile['ret']
-rvecs = npzfile['rvecs']
-tvecs = npzfile['tvecs']
 
 def ResizeWithAspectRatio(image, width=None, height=None, inter=cv.INTER_AREA):
     '''
@@ -61,24 +54,23 @@ class flir_cameras:
             # Set integer value from entry node as new value of enumeration node
             node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
 
-            #  Image acquisition must be ended when no more images are needed.
-            self.cam_ptr.BeginAcquisition()
-            
-
         
-    def Acquire(self):       
+    def Acquire(self):
+        #  Image acquisition must be ended when no more images are needed.
+        self.cam_ptr.BeginAcquisition()
+
         image_result = self.cam_ptr.GetNextImage(1000)
 
         image_converted = image_result.GetNDArray()
 
         image_result.Release()
 
-        return image_converted
-
-    def Close(self):
         # End Acquisition
         self.cam_ptr.EndAcquisition()
 
+        return image_converted
+
+    def Close(self):     
         # Deinitialize camera
         self.cam_ptr.DeInit()
 
@@ -90,10 +82,6 @@ class flir_cameras:
 
         # Release system instance
         self.system.ReleaseInstance()
-
-class head_pose:
-    def __init__(self, head_ids = {24, 29}):
-        YAH = 2
         
 def main():
     camera = flir_cameras()

@@ -3,7 +3,7 @@ from scipy.spatial.transform import Rotation as R
 import numpy.matlib
 
 class RSS_cc:
-    def __init__ (self, r_b = 0.5, r_m = 0.3, d_b = 0.2, d_m = 0.4, d = 0.7, h = 0.3, phi = 0.3491):
+    def __init__ (self, r_b = 0.5, r_m = 0.3, d_b = 0.2, d_m = 0.4, d = 0.7, h = 0.3, phi = 0.3491, beta = np.pi/2):
         # Physical parameters of the platform in meters and radians.       
         self.r_b = r_b #Radious of the base
         self.r_m = r_m #Radious of the platform
@@ -15,6 +15,7 @@ class RSS_cc:
         self.h = h #Servo's arm lenght
         
         self.phi = phi #Angle between servo's arm and platform's base
+        self.beta = beta
          
         # Compute vector bk and mk 
         k = np.arange(1,7)
@@ -27,7 +28,7 @@ class RSS_cc:
         self.m_k = [r_m * np.cos(self.theta_m), r_m * np.sin(self.theta_m), np.zeros(6)]
             
         # Compute beta and gamma
-        self.beta_k = n*(2/3)*np.pi + np.power(-1,k)*np.pi/2
+        self.beta_k = n*(2/3)*np.pi + np.power(-1,k)*self.beta
         self.phi_k = np.power(-1,k+1)*phi
         
     def inverse_kinematics (self, pose):
@@ -65,3 +66,45 @@ class RSS_cc:
     def home_pose (self):
         z = np.sqrt(self.d**2 - (self.r_m*np.cos(self.theta_m[0]) - self.r_b*np.cos(self.theta_b[0]) + self.h*np.cos(self.beta_k[0]))**2 - (self.r_m*np.sin(self.theta_m[0]) - self.r_b*np.sin(self.theta_b[0]) - self.h*np.sin(self.beta_k[0]))**2)         
         return np.array([0, 0, z, 0, 0, 0])
+    
+    def check_pose(self, pose):
+        '''
+            Checks if a given pose p is inside the workspace, considering kinematic and joint constraints.
+            Returns True if Yes, False else
+        '''
+        # Kinematic constraints
+
+        Rot = R.from_euler('zyz', pose[3:], degrees=False)
+            
+        i_k = np.matlib.repmat(pose[:3], 6, 1).T + np.matmul(Rot.as_matrix(), self.m_k) - self.b_k
+        
+        f_k = (np.cos(self.beta_k)*i_k[0,:] + np.sin(self.beta_k)*i_k[1,:])*2*self.h
+
+        e_k = (np.sin(self.beta_k)*np.sin(self.phi_k)*i_k[0,:] - np.cos(self.beta_k)*np.sin(self.phi_k)*i_k[1,:] + np.cos(self.phi_k)*i_k[2,:])*2*self.h
+
+        g_k = np.power(np.linalg.norm(i_k, axis=0), 2) - (self.d**2 - self.h**2)
+
+        if(not np.all((np.abs(g_k) <= np.sqrt(e_k**2 + f_k**2)))):
+            return False
+
+    
+        # Joint constraints
+        return True
+
+    def check_bounded_box (self, box):
+        '''
+            Checks if a bounded box is inside the workspace. Returns True if Yes, False else.
+            box must be either a 3D or 6D box. The box is expected to be a center point and the box side    
+        '''
+        vertexes = 2**(np.size(box)/2)-1 # Either 8 or 64
+        combinations = bin(vertexes)
+
+        #for i in range(vertexes):
+            
+
+    def estimate_workspace_metrics (self, dim = 3, epsilon = 1e-8):
+        '''
+            Estimates the workspace and the workspace metrics inside it
+        '''
+        inner_point = self.home_pose()
+

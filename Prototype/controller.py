@@ -79,7 +79,7 @@ class controller:
 		self.state['omega'].fill(0)
 		self.state['theta'].fill(0)
 
-def camera_thread():
+def camera_thread(corner):
 	camera = flir_cameras()
 	imgs = []
 	while flag:
@@ -90,22 +90,20 @@ def camera_thread():
 	camera.Close()
 	print("Video saved and camera closed")
 
-		
-def main():
+def path_thread(corner, speed, laps):
+	global flag
+	x = corner
+	y = corner
+
 	Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.017, d_m = 0.008, d = 0.1175, h = 0.027)
 	Populu_maestro = servo_serial_master(port = '/dev/ttyACM0', baud_rate = 115200)
 	cnt = controller(manipulator = Manipulator, actuator_interface = Populu_maestro)
 	
 	cnt.go_home()
-	corner=0.04
-	speed=0.4
-	x = corner
-	y = corner
-
 	cnt.path_linear(np.array([x, y, Manipulator.home_pose()[2]]),speed)
-	_thread.start_new_thread (camera_thread)
+	
 	time.sleep(1)
-	for i in range(10):
+	for i in range(laps):
 		cnt.path_linear(np.array([-x, y, Manipulator.home_pose()[2]]),speed)
 		cnt.path_linear(np.array([-x, -y, Manipulator.home_pose()[2]]),speed)
 		cnt.path_linear(np.array([x, -y, Manipulator.home_pose()[2]]),speed)
@@ -114,6 +112,23 @@ def main():
 	flag = False
 	time.sleep(1)	
 	cnt.go_home()
+		
+def main():
+	corner = 0.04
+	speed = 0.2
+	laps = 10
+	_thread.start_new_thread (path_thread, (corner,speed,laps,))
+	camera = flir_cameras()
+	imgs = []
+	while flag:
+		imgs.append(camera.Acquire())
+		time.sleep(1/fps)
+
+	file_name = 'path_videos/' + str(corner) + '_' + str(speed) + '_' + str(laps) + '_' + str(fps)
+	np.savez(file_name, images=imgs, fps=fps, corner=corner, speed=speed, laps=laps)
+	camera.Close()
+	print("Video saved and camera closed")
+	
 	
 
 if __name__ == "__main__":
