@@ -3,22 +3,22 @@ tic
 
 %% Physical parameters of the platform in meters and radians.
 
-r_b = 0.052566; %Radious of the base
-r_p = 0.048139; %Radious of the platform
+r_b = 0.5; %Radious of the base
+r_p = 0.3; %Radious of the platform
 
-d_b = 0.01559; %Lenght between base's anchors
-d_p = 0.00800; %Lenght between platform's anchors
+d_b = 0.2; %Lenght between base's anchors
+d_p = 0.4; %Lenght between platform's anchors
 
-h = 0.025; %Servo's arm lenght
-d = 0.085; %Platform's arm lenght
+h = 0.3; %Servo's arm lenght
+d = 0.7; %Platform's arm lenght
 
-phi = 20*2*pi/360; %Angle between servo's arm and platform's base
+phi = 0.3491; %Angle between servo's arm and platform's base
 
 %% Discretize the 3D space
 
-Nx=200;
-Ny=200;
-Nz=100;
+Nx=50;
+Ny=50;
+Nz=50;
 workspace_max = d+h-cos(pi/3)*r_b;
 x = linspace(-workspace_max,workspace_max,Nx);
 y = linspace(-workspace_max,workspace_max,Ny);
@@ -48,23 +48,28 @@ phi_k = (-1).^(k+1)*phi;
 
 %% Compute the binary 3D matrix
 
-workspace = ones(dim_x,dim_y,dim_z);
+workspace = zeros(dim_x,dim_y,dim_z);
 
 %% Generate the workspace
-parfor ix = 1:dim_x
+for ix = 1:dim_x
     for iy = 1:dim_y
         for iz = 1:dim_z
             T = [X(ix,iy,iz); Y(ix,iy,iz); Z(ix,iy,iz)];
             alpha_k = SixRSS_inverse_kinematics (T, eye(3), p_k, b_k, beta_k, phi_k, d, h);
 
-            if (isreal(alpha_k)== 0)
-               workspace(ix,iy,iz) = 0;
+            if (isreal(alpha_k)== 1)
+               workspace(ix,iy,iz) = 1;
             end
               
         end
     end
 end
 
+toc
+
+volume = sum(workspace(:))*density;
+
+if 0
 %% Draw the workspace
 figure
 p = patch(isosurface(X,Y,Z,workspace,0));
@@ -116,8 +121,7 @@ for i=1:6
     v=[H_k(:,i)';P_k(:,i)'];
     plot3(v(:,1),v(:,2),v(:,3),'blue')
 end
-
-
+ 
 %OptionZ.FrameRate=30;OptionZ.Duration=6;OptionZ.Periodic=true;
 %CaptureFigVid([-20,20;-110,20;-190,20;-290,20;-380,20], 'WellMadeVid',OptionZ)
-
+end

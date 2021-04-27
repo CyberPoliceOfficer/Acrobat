@@ -1,6 +1,28 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import numpy.matlib
+import time
+
+def divide_box (box, combination_key, dim = 3):
+    boxes = np.zeros((2**dim,dim*2))
+    i = 0
+    for subbox in boxes:
+        indices = format(i, combination_key)
+        for j in range(dim):
+            if (int(indices[j])):
+                subbox[2*j] = box[2*j] + (box[2*j+1] - box[2*j])/2
+                subbox[2*j+1] = box[2*j+1] 
+            else:
+                subbox[2*j] = box[2*j] 
+                subbox[2*j+1] = box[2*j+1] - (box[2*j+1] - box[2*j])/2
+        i = i + 1
+    return boxes
+
+def estimate_box_volume (box, dim = 3):
+    volume = 1
+    for i in range(dim):
+        volume = volume*(box[i*2+1]-box[i*2])
+    return volume
 
 class RSS_cc:
     def __init__ (self, r_b = 0.5, r_m = 0.3, d_b = 0.2, d_m = 0.4, d = 0.7, h = 0.3, phi = 0.3491, beta = np.pi/2):
@@ -83,28 +105,141 @@ class RSS_cc:
         e_k = (np.sin(self.beta_k)*np.sin(self.phi_k)*i_k[0,:] - np.cos(self.beta_k)*np.sin(self.phi_k)*i_k[1,:] + np.cos(self.phi_k)*i_k[2,:])*2*self.h
 
         g_k = np.power(np.linalg.norm(i_k, axis=0), 2) - (self.d**2 - self.h**2)
+    
 
         if(not np.all((np.abs(g_k) <= np.sqrt(e_k**2 + f_k**2)))):
             return False
 
     
-        # Joint constraints
+        # Joint constraints.
+        # TBD
         return True
 
-    def check_bounded_box (self, box):
+    def check_bounded_box (self, box, combination_key, epsilon, dim = 3):
         '''
             Checks if a bounded box is inside the workspace. Returns True if Yes, False else.
-            box must be either a 3D or 6D box. The box is expected to be a center point and the box side    
+            box must be either a 3D or 6D box.  
         '''
-        vertexes = 2**(np.size(box)/2)-1 # Either 8 or 64
-        combinations = bin(vertexes)
-
-        #for i in range(vertexes):
+        
+        
+        
+        vertexes = int(2**(dim)) # Either 8 or 64
+        
+        aux_pose = np.zeros(6)
+        
+        counter = vertexes
+        
+        for i in range(vertexes):
+            indices = format(i, combination_key)
+            for j in range(dim):
+                aux_pose[j] = box [2*j + int(indices[j])]
+            if (not self.check_pose(aux_pose)):
+                counter = counter - 1
+        
+        # If the box is either completly out or completly inside
+        if counter == 0:
+            return 0
+        if counter == vertexes:
+            return estimate_box_volume (box, dim)
+        
+        # If the box volume is smaller than epsilon, don't search
+        volume = estimate_box_volume (box, dim)
+        if (volume < epsilon):
+            return counter/vertexes*volume
+        
+        # If the box is in the workspace border, must be divided
+        boxes = divide_box (box, combination_key, dim)
+        
+        volume = 0
+        for subbox in boxes:
+            subbox_volume = self.check_bounded_box (subbox, combination_key, epsilon, dim)
+            volume = volume + subbox_volume
+        return volume
             
 
-    def estimate_workspace_metrics (self, dim = 3, epsilon = 1e-8):
+    def estimate_workspace_metrics_tree (self, dim = 3, epsilon = 1e-5):
         '''
             Estimates the workspace and the workspace metrics inside it
         '''
+        combination_key = "0" + str(dim) + "b"
         inner_point = self.home_pose()
+        translation_maj = self.d + self.h - np.sin(np.pi/3)*self.r_b
+        orientation_maj = np.pi/3
+        
+        # First boxes must be carefully assembled
+        boxes = np.zeros((2**dim,dim*2))
+        i = 0
+        for subbox in boxes:
+            indices = format(i, combination_key)
+            for j in range(dim):
+                if j < 2: # x and y
+                    if (int(indices[j])):
+                        subbox[2*j] = 0
+                        subbox[2*j+1] = translation_maj
+                    else:
+                        subbox[2*j] = -1*translation_maj
+                        subbox[2*j+1] = 0
+                elif j == 2: # z
+                    if (int(indices[j])):
+                        subbox[2*j] = 0
+                        subbox[2*j+1] = inner_point[2]
+                    else:
+                        subbox[2*j] = inner_point[2]
+                        subbox[2*j+1] = self.d + self.h
+                else: # 3 rotation angles
+                    if (int(indices[j])):
+                        subbox[2*j] = 0
+                        subbox[2*j+1] = orientation_maj
+                    else:
+                        subbox[2*j] = -1*orientation_maj
+                        subbox[2*j+1] = 0
+            i = i + 1
+        
+        volume = 0
+        for subbox in boxes:
+            subbox_volume = self.check_bounded_box (subbox, combination_key, epsilon, dim)
+            volume = volume + subbox_volume
+        return volume
 
+        
+    def estimate_workspace_metrics_discretization (self, n_x = 100, n_y = 100, n_z = 50):
+        '''
+            Estimates the workspace and the workspace metrics inside it
+        '''
+        xy_maj = self.d + self.h - np.sin(np.pi/3)*self.r_b
+        z_maj = self.d + self.h
+        
+        dx = 2*xy_maj/(n_x-1)
+        dy = 2*xy_maj/(n_y-1)
+        dz = z_maj/(n_z-1)
+        
+        print(dx*dy*dz)
+        
+        pose = np.zeros(6)
+        volume = 0
+        
+        for x in range(n_x):
+            for y in range(n_y):
+                for z in range(n_z):
+                    pose[0] = -1*xy_maj + x*dx
+                    pose[1] = -1*xy_maj + y*dy
+                    pose[2] = z*dz
+                    if (self.check_pose(pose)):
+                        volume = volume + dx*dy*dz
+        
+        return volume
+                    
+
+        
+def main():
+    t = time.time()
+    manipulator = RSS_cc()
+    volume = manipulator.estimate_workspace_metrics_tree(epsilon = 1e-07)
+    #volume = manipulator.estimate_workspace_metrics_discretization()
+    print('Volume:', volume)
+    print('Time:', time.time() - t)
+
+
+
+if __name__ == "__main__":
+    main()
