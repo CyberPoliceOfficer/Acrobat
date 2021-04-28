@@ -14,21 +14,7 @@ d = 0.7; %Platform's arm lenght
 
 phi = 0.3491; %Angle between servo's arm and platform's base
 
-%% Discretize the 3D space
 
-Nx=50;
-Ny=50;
-Nz=50;
-workspace_max = d+h-cos(pi/3)*r_b;
-x = linspace(-workspace_max,workspace_max,Nx);
-y = linspace(-workspace_max,workspace_max,Ny);
-z = linspace(0,d+h,Nz);
-[X,Y,Z] = meshgrid(x,y,z);
-density = (2*workspace_max)/(Nx-1)*(2*workspace_max)/(Ny-1)*(d+h)/(Nz-1);
-
-dim_x = size(X); dim_x = dim_x(1);
-dim_y = size(Y); dim_y = dim_y(2);
-dim_z = size(Z); dim_z = dim_z(3);
 
 %% Compute vector bk and pk
 
@@ -47,6 +33,22 @@ beta_k = n*(2/3)*pi + (-1).^(k)*pi/2;
 phi_k = (-1).^(k+1)*phi;
 
 %% Compute the binary 3D matrix
+
+%% Discretize the 3D space
+
+Nx=20;
+Ny=20;
+Nz=20;
+workspace_max = h+d;
+x = linspace(-workspace_max,workspace_max,Nx);
+y = linspace(-workspace_max,workspace_max,Ny);
+z = linspace(0,d+h,Nz);
+[X,Y,Z] = meshgrid(x,y,z);
+density = (2*workspace_max)/(Nx-1)*(2*workspace_max)/(Ny-1)*(d-h)/(Nz-1);
+
+dim_x = size(X); dim_x = dim_x(1);
+dim_y = size(Y); dim_y = dim_y(2);
+dim_z = size(Z); dim_z = dim_z(3);
 
 workspace = zeros(dim_x,dim_y,dim_z);
 
