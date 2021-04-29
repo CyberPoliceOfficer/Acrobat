@@ -1,5 +1,58 @@
 #include "evaluate_workspace.hpp"
 
+bool check_pose_and_compute_jacobian (struct SixRSS * manipulator, const Vector3f& T, const Matrix3f& R, Ref<MatrixXf> Jacobian){
+    Vector3f i_k;
+    Vector<float, 6> alphas;
+
+    float f_k, e_k, g_k, t_k;
+
+    // Kinematic constraints
+    for (int k = 0; k < 6; k++){
+        
+        i_k = T + R*manipulator->m_k.col(k) - manipulator->b_k.col(k);
+
+        f_k = (cos(manipulator->beta_k(k))*i_k(0) + sin(manipulator->beta_k(k))*i_k(1))*2*manipulator->h;
+
+        e_k = (sin(manipulator->beta_k(k))*sin(manipulator->phi_k(k))*i_k(0) - cos(manipulator->beta_k(k))*sin(manipulator->phi_k(k))*i_k(1) + cos(manipulator->phi_k(k))*i_k(2))*2*manipulator->h;
+        
+        g_k = i_k.squaredNorm() - (manipulator->d*manipulator->d - manipulator->h*manipulator->h);
+
+        t_k = sqrt(e_k*e_k + f_k*f_k);
+        if(abs(g_k) > t_k){
+            return false;
+        }
+
+        alphas(k) = asin(g_k/t_k) - atan2(f_k, e_k);
+    }
+
+    // Joint constraints
+    Matrix<float, 3, 6> h_k;
+    Matrix<float, 3, 6> MR_k;
+    Vector<float, 3> d_k;
+    Vector<float, 3> j1_k;
+
+    get_h_k(manipulator, alphas, h_k);
+    MR_k = R*manipulator->m_k;
+
+    for (int k = 0; k < 6; k++){
+        d_k = MR_k.col(k) + T - h_k.col(k) - manipulator->b_k.col(k);
+        j1_k = (h_k.col(k)).cross(d_k);
+        float ang_j1_k = acos(j1_k.dot(manipulator->u_k.col(k))/(manipulator->u_k.col(k).norm()*j1_k.norm()));
+        if (ang_j1_k > manipulator->joint_limit){
+            return false;
+        }
+        float ang_j2_k = abs(acos(d_k.dot(MR_k.col(k))/(MR_k.col(k).norm()*d_k.norm())) - M_PI/2);
+        if (ang_j2_k > manipulator->joint_limit){
+            return false; 
+        }
+        float j_q = (h_k.col(k).cross(d_k)).dot(manipulator->u_k.col(k));
+        Jacobian.row(k).head<3>() = d_k/j_q;
+        Jacobian.row(k).tail<3>() = MR_k.col(k).cross(d_k)/j_q;
+    }
+
+    return true;
+}
+
 void get_h_k (struct SixRSS * manipulator, const Ref<const VectorXf>& alphas, Ref<MatrixXf> h_k){
     for (int k = 0; k < 6; k++){
         h_k(0,k) = manipulator->h*(sin(manipulator->beta_k(k))*sin(manipulator->phi_k(k))*sin(alphas(k)) + cos(manipulator->beta_k(k))*cos(alphas(k)));
@@ -8,7 +61,7 @@ void get_h_k (struct SixRSS * manipulator, const Ref<const VectorXf>& alphas, Re
     }   
 }
 
-void inverse_kinematic_jacobian (struct SixRSS * manipulator, const Ref<const Vector3f>& T, const Ref<const Matrix3f>& R, Ref<MatrixXf>  Jacobian){
+void inverse_kinematic_jacobian (struct SixRSS * manipulator, const Ref<const Vector3f>& T, const Ref<const Matrix3f>& R, Ref<MatrixXf> Jacobian){
     /*
     MATLAB:
     M_k = R*m_k + T;
@@ -56,12 +109,14 @@ void inverse_kinematics (struct SixRSS * manipulator, const Ref<const Vector3f>&
         }
     }
 
+    return;
 }
  
 bool check_pose (struct SixRSS * manipulator, const Vector3f& T, const Matrix3f& R){
     Vector3f i_k;
+    Vector<float, 6> alphas;
 
-    float f_k, e_k, g_k;
+    float f_k, e_k, g_k, t_k;
 
     // Kinematic constraints
     for (int k = 0; k < 6; k++){
@@ -74,17 +129,41 @@ bool check_pose (struct SixRSS * manipulator, const Vector3f& T, const Matrix3f&
         
         g_k = i_k.squaredNorm() - (manipulator->d*manipulator->d - manipulator->h*manipulator->h);
 
-        if(abs(g_k) > sqrt(e_k*e_k + f_k*f_k)){
+        t_k = sqrt(e_k*e_k + f_k*f_k);
+        if(abs(g_k) > t_k){
             return false;
         }
+
+        alphas(k) = asin(g_k/t_k) - atan2(f_k, e_k);
     }
 
     // Joint constraints
+    Matrix<float, 3, 6> h_k;
+    Matrix<float, 3, 6> MR_k;
+    Vector<float, 3> d_k;
+    Vector<float, 3> j1_k;
+
+    get_h_k(manipulator, alphas, h_k);
+    MR_k = R*manipulator->m_k;
+
+    for (int k = 0; k < 6; k++){
+        d_k = MR_k.col(k) + T - h_k.col(k) - manipulator->b_k.col(k);
+        j1_k = (h_k.col(k)).cross(d_k);
+        float ang_j1_k = acos(j1_k.dot(manipulator->u_k.col(k))/(manipulator->u_k.col(k).norm()*j1_k.norm()));
+        if (ang_j1_k > manipulator->joint_limit){
+            return false;
+        }
+        float ang_j2_k = abs(acos(d_k.dot(MR_k.col(k))/(MR_k.col(k).norm()*d_k.norm())) - M_PI/2);
+        if (ang_j2_k > manipulator->joint_limit){
+           return false; 
+        }
+    }
 
     return true;
 }
 
 void generate_manipulator (struct SixRSS * manipulator){
+
     int k;
     int n;
     for (int i = 0; i < 6 ; i++){
@@ -135,10 +214,6 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
     Matrix<float, 6, 6> Jacobian;
     Matrix<float, 6, 6> JacobianInv;
     
-    T << 0, 0, 0.8;
-    inverse_kinematic_jacobian (evaluatee, T, R, Jacobian);
-    std::cout << Jacobian << std::endl;
-
     float cell_volume = dx*dy*dz;
     int n_nodes = 0;
 
@@ -148,7 +223,7 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
             T(1) = -1*xy_maj + y*dy;
             for (int z = 0; z < n_z ; z++){                                
                 T(2) = z_min + z*dz;
-                if (check_pose(evaluatee, T, R)){
+                if (check_pose_and_compute_jacobian (evaluatee, T, R, Jacobian)){
                     inverse_kinematic_jacobian (evaluatee, T, R, Jacobian);
                     Jacobian = Jacobian.inverse();
                     n_nodes++;
@@ -157,7 +232,7 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
         }
     }                
     
-    std::cout << n_nodes << std::endl;
+    std::cout << n_nodes << " of " << n_x*n_y*n_z << std::endl;
     result[0] = n_nodes*cell_volume;
     return;
 }
@@ -178,6 +253,8 @@ void evaluate_workspace (int technique, float * config, float * params, float * 
     evaluatee.phi = params[6]; //Angle between servo's arm and platform's base
     evaluatee.beta = params[7];
 
+    evaluatee.joint_limit = config[4];
+
     generate_manipulator(&evaluatee);
 
     switch (technique){ // technique 0 -> discretization, technique 1 -> tree
@@ -189,12 +266,11 @@ void evaluate_workspace (int technique, float * config, float * params, float * 
     return;
 }
 
-
 int main()
 {
-  float config[4] = {50, 50, 50, 3};
-  float params[8] = {0.5, 0.3, 0.2, 0.6667, 0.7, 0.3, 0.3491, M_PI/2}; //r_b, r_m, d_b, d_m, d, h, phi, beta
-  float result[5] = {0, 0, 0, 0, 0};
-  evaluate_workspace(0, config, params, result);
-  std::cout << result[0] << std::endl;
+    float config[5] = {50, 50, 50, 3, 1};
+    float params[8] = {0.5, 0.3, 0.2, 0.6667, 0.7, 0.3, 0.3491, M_PI/2}; //r_b, r_m, d_b, d_m, d, h, phi, beta
+    float result[5] = {0, 0, 0, 0, 0};
+    evaluate_workspace(0, config, params, result);
+    std::cout << result[0] << std::endl;
 }

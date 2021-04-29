@@ -22,6 +22,8 @@ struct SixRSS
   float phi; //Angle between servo's arm and platform's base
   float beta;
 
+  float joint_limit;
+
   Vector<float, 6> theta_b;
   Vector<float, 6> theta_m;  
 
@@ -34,8 +36,10 @@ struct SixRSS
   Matrix<float, 3, 6> u_k;
 };
 
+void get_h_k (struct SixRSS * , const Ref<const VectorXf>& , Ref<MatrixXf> );
 void inverse_kinematics (struct SixRSS * , const Ref<const Vector3f>& , const Ref<const Matrix3f>& , Ref<VectorXf>  );
 void kinematic_inverse_jacobian (struct SixRSS * , const Ref<const Vector3f> & , const Ref<const Matrix3f> &, Ref<MatrixXf> & );
+bool check_pose_and_compute_jacobian (struct SixRSS * , const Vector3f& , const Matrix3f& , Ref<MatrixXf> );
 bool check_pose (struct SixRSS *, const Ref<const Vector3f> &, const Ref<const Matrix3f> &);
 void generate_manipulator (struct SixRSS *);
 void evaluate_workspace_discretization (struct SixRSS * , float *, float * );
