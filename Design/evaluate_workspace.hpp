@@ -22,18 +22,19 @@ struct SixRSS
   float phi; //Angle between servo's arm and platform's base
   float beta;
 
-  VectorXf theta_b;
-  VectorXf theta_m;  
+  Vector<float, 6> theta_b;
+  Vector<float, 6> theta_m;  
 
-  MatrixXf b_k;
-  MatrixXf m_k;
+  Matrix<float, 3, 6> b_k;
+  Matrix<float, 3, 6> m_k;
 
-  VectorXf beta_k;
-  VectorXf phi_k;
+  Vector<float, 6> beta_k;
+  Vector<float, 6> phi_k;
 
-  VectorXf u_k;
+  Matrix<float, 3, 6> u_k;
 };
 
+void inverse_kinematics (struct SixRSS * , const Ref<const Vector3f>& , const Ref<const Matrix3f>& , Ref<VectorXf>  );
 void kinematic_inverse_jacobian (struct SixRSS * , const Ref<const Vector3f> & , const Ref<const Matrix3f> &, Ref<MatrixXf> & );
 bool check_pose (struct SixRSS *, const Ref<const Vector3f> &, const Ref<const Matrix3f> &);
 void generate_manipulator (struct SixRSS *);
