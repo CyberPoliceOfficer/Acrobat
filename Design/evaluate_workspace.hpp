@@ -39,7 +39,7 @@ struct SixRSS
 void get_h_k (struct SixRSS * , const Ref<const VectorXf>& , Ref<MatrixXf> );
 void inverse_kinematics (struct SixRSS * , const Ref<const Vector3f>& , const Ref<const Matrix3f>& , Ref<VectorXf>  );
 void kinematic_inverse_jacobian (struct SixRSS * , const Ref<const Vector3f> & , const Ref<const Matrix3f> &, Ref<MatrixXf> & );
-bool check_pose_and_compute_jacobian (struct SixRSS * , const Vector3f& , const Matrix3f& , Ref<MatrixXf> );
+bool check_pose_and_compute_inverse_kinematic_jacobian (struct SixRSS * , const Vector3f& , const Matrix3f& , Ref<MatrixXf> );
 bool check_pose (struct SixRSS *, const Ref<const Vector3f> &, const Ref<const Matrix3f> &);
 void generate_manipulator (struct SixRSS *);
 void evaluate_workspace_discretization (struct SixRSS * , float *, float * );
