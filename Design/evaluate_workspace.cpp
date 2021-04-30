@@ -1,5 +1,6 @@
 #include "evaluate_workspace.hpp"
 
+
 float get_home_z (struct SixRSS * manipulator){
     float A = pow(manipulator->r_m*cos(manipulator->theta_m(0)) - manipulator->r_b*cos(manipulator->theta_b(0)) + manipulator->h*cos(manipulator->beta_k(0)),2);
     float B = pow(manipulator->r_m*sin(manipulator->theta_m(0)) - manipulator->r_b*sin(manipulator->theta_b(0)) - manipulator->h*sin(manipulator->beta_k(0)),2);
@@ -249,15 +250,15 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
         }
     }                
     
-    std::cout << n_nodes << " of " << n_x*n_y*n_z << std::endl;
     result[0] = n_nodes*cell_volume;
     result[1] = GTCI/n_nodes;
     result[2] = GRCI/n_nodes;
-    result[3] = GTSI/n_nodes;
-    result[4] = GRSI/n_nodes;
+    result[3] = -1*GTSI/n_nodes;
+    result[4] = -1*GRSI/n_nodes;
     return;
 }
  
+extern "C" {
 void evaluate_workspace (int technique, float * config, float * params, float * result){
 
     struct SixRSS evaluatee;
@@ -286,7 +287,7 @@ void evaluate_workspace (int technique, float * config, float * params, float * 
 
     return;
 }
-
+}
 int main()
 {
     float config[5] = {50, 50, 50, 3, M_PI/3};

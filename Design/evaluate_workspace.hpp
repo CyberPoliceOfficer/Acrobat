@@ -43,6 +43,9 @@ bool check_pose_and_compute_inverse_kinematic_jacobian (struct SixRSS * , const 
 bool check_pose (struct SixRSS *, const Ref<const Vector3f> &, const Ref<const Matrix3f> &);
 void generate_manipulator (struct SixRSS *);
 void evaluate_workspace_discretization (struct SixRSS * , float *, float * );
-void evaluate_workspace (int , float * , float * , float * );
+
+extern "C" {
+  void evaluate_workspace (int , float * , float * , float * );
+}
 
 #endif // MY_HEADER_H
