@@ -36,10 +36,10 @@ phi_k = (-1).^(k+1)*phi;
 
 %% Discretize the 3D space
 
-Nx=20;
-Ny=20;
-Nz=20;
-workspace_max = h+d;
+Nx=50;
+Ny=50;
+Nz=50;
+workspace_max = h+d - cos(pi/3)*r_b;
 x = linspace(-workspace_max,workspace_max,Nx);
 y = linspace(-workspace_max,workspace_max,Ny);
 z = linspace(0,d+h,Nz);

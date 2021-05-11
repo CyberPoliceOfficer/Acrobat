@@ -1,32 +1,25 @@
 clear;
+
+SixRSS (x)
+
 %% Desired translation and rotation of the platform
 
 %T = [0 -0.0808578261898999 0]';%Translation
 %T = [0; 0; 0.11];
-T = [0; 0; 0.13812719037571220825899587];
+%T = [0; 0; 0.1];
 W = [0; 0; 0]; %Rotation
-R = GetRotMatv0(W(1),W(2),W(3));
+%R = GetRotMatv0(W(1),W(2),W(3));
 
 %% Physical parameters of the platform in meters and radians.
-
-r_b = 0.052566; %Radious of the base
-r_p = 0.048139; %Radious of the platform
-
-d_b = 0.01559; %Lenght between base's anchors
-d_p = 0.0800; %Lenght between platform's anchors
-
-h = 0.027; %Servo's arm lenght
-d = 0.1175; %Platform's arm lenght
-
-phi = 20*2*pi/360; %Angle between servo's arm and platform's base
+r_b = x(1); r_p = x(2); d_b = x(3); d_p = x(4); d = x(5); h = x(6); phi = x(7); beta = x(8);
 
 %% Compute vector bk and pk
 
 k = [1 2 3 4 5 6];
 n = floor((k-1)/2);
 
-theta_b = n*(2/3)*pi + (-1).^k*asin(d_b/(2*r_b));
-theta_p = n*(2/3)*pi + (-1).^k*asin(d_p/(2*r_p));
+theta_b = n*(2/3)*pi + (-1).^k*d_b;
+theta_p = n*(2/3)*pi + (-1).^k*d_p;
 
 b_k = [r_b * cos(theta_b); r_b * sin(theta_b);zeros(1,6)];
 p_k = [r_p * cos(theta_p); r_p * sin(theta_p);zeros(1,6)];
@@ -34,11 +27,13 @@ p_k = [r_p * cos(theta_p); r_p * sin(theta_p);zeros(1,6)];
 
 %% Compute beta and gamma
 
-beta_k = n*(2/3)*pi + (-1).^(k)*(pi/2);
+beta_k = n*(2/3)*pi + (-1).^(k)*beta;
 phi_k = (-1).^(k+1)*phi;
 
 %% Home
-home = mean(d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2);
+home = mean((d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2))
+
+T = [0; 0; home];
 
 %% Compute the inverse kinematics
 
