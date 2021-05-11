@@ -12,13 +12,20 @@ float get_home_z (struct SixRSS * manipulator){
         return -1;
 } 
 
-void compute_metrics (Ref<MatrixXf> Jacobian, float * LTCI, float * LRCI, float * LTSI, float * LRSI){
-    JacobiSVD<MatrixXf> Jt(Jacobian.topRows<3>());
-    *LTCI = Jt.singularValues()(2)/Jt.singularValues()(0);
-    JacobiSVD<MatrixXf> Jr(Jacobian.bottomRows<3>());
-    *LRCI = Jr.singularValues()(2)/Jr.singularValues()(0);
-    *LTSI = Jacobian.topRows<3>().lpNorm<Infinity>();
-    *LRSI = Jacobian.bottomRows<3>().lpNorm<Infinity>();
+void compute_metrics (Ref<MatrixXf> Jacobian, float * LTCI, float * LRCI, float * LTSI, float * LRSI, int metrics){
+    switch (metrics){
+        case 3:
+            {
+                JacobiSVD<MatrixXf> Jt(Jacobian.topRows<3>());
+                JacobiSVD<MatrixXf> Jr(Jacobian.bottomRows<3>());
+                *LTCI = Jt.singularValues()(2)/Jt.singularValues()(0);         
+                *LRCI = Jr.singularValues()(2)/Jr.singularValues()(0);
+            }          
+            
+        case 2:
+            *LTSI = Jacobian.topRows<3>().lpNorm<Infinity>();
+            *LRSI = Jacobian.bottomRows<3>().lpNorm<Infinity>();
+    }
 }
 
 bool check_pose_and_compute_inverse_kinematic_jacobian (struct SixRSS * manipulator, const Vector3f& T, const Matrix3f& R, Ref<MatrixXf> Jacobian){
@@ -181,8 +188,8 @@ void generate_manipulator (struct SixRSS * manipulator){
     for (int i = 0; i < 6 ; i++){
         k = i + 1;
         n = floor(i/2);
-        manipulator->theta_b(i) = n*(2.0/3)*M_PI + pow(-1,k)*asin(manipulator->d_b);
-        manipulator->theta_m(i) = n*(2.0/3)*M_PI + pow(-1,k)*asin(manipulator->d_m);
+        manipulator->theta_b(i) = n*(2.0/3)*M_PI + pow(-1,k)*manipulator->d_b;
+        manipulator->theta_m(i) = n*(2.0/3)*M_PI + pow(-1,k)*manipulator->d_m;
         
         manipulator->b_k(0,i) = manipulator->r_b * cos(manipulator->theta_b(i));
         manipulator->b_k(1,i) = manipulator->r_b * sin(manipulator->theta_b(i));
@@ -211,6 +218,8 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
     int n_y = static_cast<int>(config[1]);
     int n_z = static_cast<int>(config[2]);
 
+    int metrics = static_cast<int>(config[5]);
+
     float dx = 2*xy_maj/(n_x-1);
     float dy = 2*xy_maj/(n_y-1);
     float dz = z_maj/(n_z-1);
@@ -228,6 +237,20 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
     float cell_volume = dx*dy*dz;
     int n_nodes = 0;
     float GTCI = 0, GRCI = 0, GTSI = 0, GRSI = 0;
+
+    if (get_home_z (evaluatee) <= 0){
+        switch (metrics){
+            case 3:
+                result[4] = 100000;
+                result[3] = 100000;                 
+            case 2:
+                result[2] = 100000;
+                result[1] = 100000;          
+            case 1:
+                result[0] = 100000;
+        } 
+        return;
+    }
     
     #pragma omp parallel for schedule(dynamic, 2) firstprivate(T) firstprivate(R) firstprivate(Jacobian) firstprivate(JacobianInv) reduction(+:GTCI) reduction(+:GRCI) reduction(+:GTSI) reduction(+:GRSI) reduction(+:n_nodes)
     for (int x = 0; x < n_x ; x++){
@@ -239,7 +262,7 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
                 if (check_pose_and_compute_inverse_kinematic_jacobian (evaluatee, T, R, JacobianInv)){                   
                     Jacobian = JacobianInv.inverse();
                     float LTCI, LRCI, LTSI, LRSI;
-                    compute_metrics(Jacobian, &LTCI , &LRCI , &LTSI, &LRSI);
+                    compute_metrics(Jacobian, &LTCI , &LRCI , &LTSI, &LRSI, metrics);
                     GTCI += LTCI;
                     GRCI += LRCI;
                     GTSI += LTSI;
@@ -250,11 +273,18 @@ void evaluate_workspace_discretization (struct SixRSS * evaluatee, float * confi
         }
     }                
     
-    result[0] = n_nodes*cell_volume;
-    result[1] = GTCI/n_nodes;
-    result[2] = GRCI/n_nodes;
-    result[3] = -1*GTSI/n_nodes;
-    result[4] = -1*GRSI/n_nodes;
+    if (n_nodes>0){
+        switch (metrics){
+            case 3:
+                result[4] = -1*GRCI/n_nodes;
+                result[3] = -1*GTCI/n_nodes;                 
+            case 2:
+                result[2] = GRSI/n_nodes;
+                result[1] = GTSI/n_nodes;          
+            case 1:
+                result[0] = -1*n_nodes*cell_volume;
+        }     
+    }
     return;
 }
  
@@ -290,13 +320,13 @@ void evaluate_workspace (int technique, float * config, float * params, float * 
 }
 int main()
 {
-    float config[5] = {50, 50, 50, 3, M_PI/3};
-    float params[8] = {0.5, 0.3, 0.2, 0.6667, 0.7, 0.3, 0.3491, M_PI/2}; //r_b, r_m, d_b, d_m, d, h, phi, beta
-    float result[5] = {0, 0, 0, 0, 0}; //V, GTCI, GRCI, GTSI, GRSI
+    float config[6] = {50, 50, 50, 3, M_PI/3, 2}; // Nx, Ny, Nz, dims = {3,6}, joint constraint, Nº cost functions
+    float params[8] = {0.5, 0.3, 0.2, 0.6667, 1, 0.5, 0.3491, M_PI/2}; //r_b, r_m, d_b, d_m, d, h, phi, beta
+    float result[5] = {0, 0, 0, 0, 0}; //V, GTSI, GRSI, GTCI, GRCI
     evaluate_workspace(0, config, params, result);
     std::cout << "Volume = " << result[0] << std::endl;
-    std::cout << "GTCI = " << result[1] << std::endl;
-    std::cout << "GRCI = " << result[2] << std::endl;
-    std::cout << "GTSI = " << result[3] << std::endl;
-    std::cout << "GRSI = " << result[4] << std::endl;
+    std::cout << "GTCI = " << result[3] << std::endl;
+    std::cout << "GRCI = " << result[4] << std::endl;
+    std::cout << "GTSI = " << result[1] << std::endl;
+    std::cout << "GRSI = " << result[2] << std::endl;
 }
