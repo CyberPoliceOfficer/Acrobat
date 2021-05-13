@@ -37,18 +37,18 @@
 %
 format compact;
 % Name of the problem to generate the output files.
-problemName = "problem1";
+problemName = "SixRSS";
 % Name of the folder to store the results. Should be in the main directory
-foldername = "results";
+foldername = "results" + problemName;
 % Create function handles. Empty arrays ( '[]' ) can be used instead of 
 % handles, e.g. for unconstrained optimization. All files should be on the
 % problems' folder, as well as the initial file ('init_file' in this
 % example)
-%cd("problems")
+cd(problemName)
 func_F = str2func('func_F');
 func_C = str2func('func_C');
 grad_C = str2func('grad_C');
-%cd("..");
+
 %
 % To use the parallel version, set the option 'parallel_version' to 1 
 % in the file 'parameters_BoostDMS.m' and uncomment the lines starting with
@@ -56,7 +56,10 @@ grad_C = str2func('grad_C');
 % to use. Alternatively, 'parpool()' uses all available processors.
 %
 % Open the parallel pool
-parpool(6);
+parpool(8);
+poolobj = gcp;
+addAttachedFiles(poolobj,{'func_F.m','func_C.m','grad_C.m', 'init_file.m'})
+cd("..");
 %
 [info,time,iter,iter_suc,list_size,func_eval] = BoostDMS(func_F,'init_file',func_C,grad_C,problemName,foldername);
 %
