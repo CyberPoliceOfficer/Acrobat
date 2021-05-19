@@ -4,6 +4,7 @@ import glob
 from scipy.spatial.transform import Rotation as R
 import scipy
 from scipy import optimize
+from scipy.optimize import Bounds
 
 def extract_points_from_video ():
     aruco_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_6X6_1000)
@@ -152,9 +153,18 @@ def main():
 
     obj.evaluate_1(np.ones(18))
     #(r_b = 0.05257, r_m = 0.04814, d_b = 0.1624, d_m = 0.0831, d = 0.1175, h = 0.027, phi = 0.3491, beta = np.pi/2
-    # u_0, u_1, u_2, u_3, u_4, u_5, r_b, r_m, d_b, d_m, phi_0, beta_0, d, h, T, theta_z
+    # u_0, u_1, u_2, u_3, u_4, u_5, 
+    # r_b, r_m, d_b, d_m, phi_0, beta_0, 
+    # d, h, T, theta_z
     x0 = np.array([1500, 1500, 1500, 1500, 1500, 1500, 0.05257, 0.04814, 0.1624, 0.0831, 0.3491, np.pi/2,  0.1175, 0.027, 0, 0, 0, 0])
-    OptimizeResult = scipy.optimize.minimize(obj.evaluate_1, x0, args=(), method='Nelder-Mead', tol=None, callback=None, options={'maxiter': 1e6, 'maxfev': None, 'disp': True, 'adaptive': True})
+    bounds = Bounds([0, 0, 0, 0, 0, 0, 
+                     0, 0, 0, 0, 0, 0, 
+                     0, 0, -2.0, -2.0, -2.0, -np.pi/4], 
+                    [3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 
+                    1.0, 1.0, np.pi/3, np.pi/3, np.pi/4, 3*np.pi/2, 
+                    1.0, 1.0, -2.0, -2.0, -2.0, -np.pi/4])
+    #OptimizeResult = scipy.optimize.minimize(obj.evaluate_1, x0, args=(), method='Nelder-Mead', tol=None, callback=None, options={'maxiter': 1e6, 'maxfev': None, 'disp': True, 'adaptive': True})
+    OptimizeResult = scipy.optimize.minimize(obj.evaluate_1, x0, args=(), method='Powell', bounds=bounds, tol=None, callback=None, options={'xtol': 0.0001, 'ftol': 0.0001, 'maxiter': 1e6, 'maxfev': None, 'disp': True, 'direc': None, 'return_all': False})
     np.savez('OptimizeResult', OptimizeResult=OptimizeResult)
     print(OptimizeResult)
 
