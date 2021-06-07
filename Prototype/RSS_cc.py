@@ -43,8 +43,8 @@ class RSS_cc:
         k = np.arange(1,7)
         n = np.floor((k-1)/2)
         
-        self.theta_b = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_b/(2*r_b))
-        self.theta_m = n*(2/3)*np.pi + np.power(-1,k)*np.arcsin(d_m/(2*r_m))
+        self.theta_b = n*(2/3)*np.pi + np.power(-1,k)*d_b
+        self.theta_m = n*(2/3)*np.pi + np.power(-1,k)*d_m
         
         self.b_k = [r_b * np.cos(self.theta_b), r_b * np.sin(self.theta_b), np.zeros(6)]
         self.m_k = [r_m * np.cos(self.theta_m), r_m * np.sin(self.theta_m), np.zeros(6)]

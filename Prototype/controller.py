@@ -4,6 +4,9 @@ import numpy as np
 import time
 from Acquisition import flir_cameras
 import _thread
+import cv2 as cv
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 
 global flag
 flag = True
@@ -113,7 +116,7 @@ def path_thread(corner, speed, laps):
 	time.sleep(1)	
 	cnt.go_home()
 		
-def main():
+def path():
 	corner = 0.04
 	speed = 0.2
 	laps = 10
@@ -129,10 +132,107 @@ def main():
 	camera.Close()
 	print("Video saved and camera closed")
 	
+def go_to ():
+	# Setup
+	aruco_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_6X6_1000)
+	aruco_side = 0.026
+	npzfile = np.load('calibration/cali_values.npz')
+	mtx = npzfile['mtx']
+	dist = npzfile['dist']
+	ret = npzfile['ret']
+	rvecs = npzfile['rvecs']
+	tvecs = npzfile['tvecs']
+
+	platform_markers = np.array([13,14,18,19], dtype=np.int32)
 	
+	x_axis = np.array([26,27,28,29], dtype=np.int32)
+	y_axis = np.array([26,21,16,11], dtype=np.int32)
+	Manipulator = RSS_cc(r_b = 0.05257, r_m = 0.04814, d_b = 0.1624, d_m = 0.0832, d = 0.1175, h = 0.027)
+	#Populu_maestro = servo_serial_master(port = '/dev/ttyACM0', baud_rate = 115200)
+
+	# Goto
+	#pose = Manipulator.home_pose()
+	#thetas = Manipulator.inverse_kinematics (pose)
+	#Populu_maestro.set_target_rad (thetas)
+	#time.sleep(1)
+
+	# Acquistion
+	# camera = flir_cameras()
+	#img = camera.Acquire()
+	#np.savez('test_img', img=img)
+	npzfile = np.load('test_img.npz')
+	img = npzfile['img']
+	corners, ids, rejectedImgPoints	= cv.aruco.detectMarkers(img, aruco_dict, mtx, dist)
+	cv.aruco.drawDetectedMarkers(img, corners, ids)
+	rvecs, tvecs, _objPoints = cv.aruco.estimatePoseSingleMarkers(corners, aruco_side, mtx, dist)
+	platform_idexes = np.in1d(ids, platform_markers)
+	# Compute
+
+	# Find axis
+	x_base = np.squeeze(tvecs[np.in1d(ids, x_axis[-1])] - tvecs[np.in1d(ids, x_axis[0])])
+	x_base = x_base/np.linalg.norm(x_base)
+	y_base = np.squeeze(tvecs[np.in1d(ids, y_axis[-1])] - tvecs[np.in1d(ids, y_axis[0])])
+	y_base = y_base/np.linalg.norm(y_base)
+	z_base = np.cross(x_base, y_base)
+	print("Test (should be ~0):", np.matmul(y_base,x_base.T))
+
+	O = np.array([x_base,y_base,z_base]).T    
+	
+	x_platform = np.squeeze(tvecs[np.in1d(ids, 13)] - tvecs[np.in1d(ids, 19)])
+	x_platform = x_platform/np.linalg.norm(x_platform)
+	y_platform = np.squeeze(tvecs[np.in1d(ids, 14)] - tvecs[np.in1d(ids, 19)])
+	y_platform = y_platform/np.linalg.norm(y_platform)
+	z_platform = np.cross(x_platform, y_platform)
+	print("Test (should be ~0):", np.matmul(y_platform,x_platform.T))
+
+	T = O @ np.squeeze((np.average(tvecs[platform_idexes == True], axis=0)))
+	B = O @ np.squeeze((np.average(tvecs[platform_idexes == False], axis=0)))
+	T = T - B
+	B = B - B
+
+	if True:
+		x_base = O @ x_base
+		y_base = O @ y_base
+		z_base = O @ z_base
+
+		x_platform = O @ x_platform
+		y_platform = O @ y_platform
+		z_platform = O @ z_platform 
+
+	print(T)
+
+	ax = plt.figure().add_subplot(projection='3d')
+	
+	if True:
+		ax.quiver(B[0], B[1], B[2], x_base[0], x_base[1], x_base[2], color='red')
+		ax.quiver(B[0], B[1], B[2], y_base[0], y_base[1], y_base[2], color='green')
+		ax.quiver(B[0], B[1], B[2], z_base[0], z_base[1], z_base[2], color='blue')
+	
+
+	if True:
+		ax.quiver(T[0], T[1], T[2], x_platform[0], x_platform[1], x_platform[2], color='red')
+		ax.quiver(T[0], T[1], T[2], y_platform[0], y_platform[1], y_platform[2], color='green')
+		ax.quiver(T[0], T[1], T[2], z_platform[0], z_platform[1], z_platform[2], color='blue')
+	
+	ax.quiver(0,0,0,T[0], T[1], T[2],  color='yellow')
+
+	plt.show()
+
+
+	M = np.array([x_platform,y_platform,z_platform]).T
+
+	# might be wrong, need to doublecheck later
+	R = (M @ O.T)
+	print(R)
+
+	# Display
+	for i in range(len(ids)):
+		img = cv.aruco.drawAxis(img, mtx, dist, rvecs[i], tvecs[i],  0.05)
+	cv.imshow('img', img)
+	#camera.Close()
+	cv.waitKey()
 
 if __name__ == "__main__":
-    main()
-	
-
+    #path()
+	go_to()
 

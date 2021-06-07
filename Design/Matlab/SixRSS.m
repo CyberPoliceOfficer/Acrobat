@@ -1,6 +1,6 @@
 clear;
 
-SixRSS (x)
+x = [0.05257; 0.04814; 0.1624; 0.0832; 0.1175; 0.027;0.3491; pi/2];
 
 %% Desired translation and rotation of the platform
 
@@ -34,6 +34,7 @@ phi_k = (-1).^(k+1)*phi;
 home = mean((d^2-(r_p*cos(theta_p) - r_b*cos(theta_b) - h*cos(beta_k)).^2 - (r_p*sin(theta_p) - r_b*sin(theta_b) - h*sin(beta_k)).^2).^(1/2))
 
 T = [0; 0; home];
+R = eye(3);
 
 %% Compute the inverse kinematics
 

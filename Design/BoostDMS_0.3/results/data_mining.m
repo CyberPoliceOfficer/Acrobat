@@ -1,4 +1,4 @@
-clear;
+    clear;
 close all;
 load BoostDMS_lastiteration_problem1.mat;
 

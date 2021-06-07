@@ -40,8 +40,8 @@ def main():
     Populu_maestro.set_speed_rad_s(3*np.ones(6))
     imgs = []
     us = []
-    num_points = 400
-    corner = 0.03
+    num_points = 100
+    corner = 0.04
     for k in range(num_points):
         isNaN = True
         while (isNaN):
@@ -65,8 +65,6 @@ def main():
         img = camera.Acquire()
         imgs.append(img)
         
-        '''
-        img = cv.undistort(img, mtx, dist)
         corners, ids, rejectedImgPoints	= cv.aruco.detectMarkers(img, aruco_dict, mtx, dist)
         #recovered_ids, other = cv.aruco.refineDetectedMarkers(img, aruco_dict, corners, ids, rejectedImgPoints, mtx, dist)
         #print(len(recovered_ids))
@@ -74,15 +72,6 @@ def main():
 
         print(len(ids))
         
-    
-        if (len(ids) > 0):
-            cv.aruco.drawDetectedMarkers(img, corners, ids)
-            rvecs, tvecs, _objPoints = cv.aruco.estimatePoseSingleMarkers(corners, aruco_side, mtx, dist)
-            for i in range(len(ids)):
-                img = cv.aruco.drawAxis(img, mtx, dist, rvecs[i], tvecs[i],  0.05)
-        cv.imshow('img', ResizeWithAspectRatio(img, width=1100))
-        cv.waitKey()
-        '''
         
 
     np.savez('calibration_data', images=imgs, us=us)
